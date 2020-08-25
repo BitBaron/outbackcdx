@@ -57,15 +57,17 @@ public class ChangePollingThread extends Thread {
     }
 
     public void run() {
+        byte[] lastSequence = "last_seq".getBytes();
         while (!shuttingDown) {
             try {
                 long startTime = System.currentTimeMillis();
+                byte[] sequence = "seq".getBytes();
                 try {
-                    byte[] output = this.index.db.get(SEQ_NUM_KEY);
-                    if(output == null){
-                        since = "0";
-                    } else {
-                        since = new String(output);
+                    lastSequence = sequence.clone();
+                    sequence = this.index.db.get(SEQ_NUM_KEY);
+                    since="0";
+                    if(!sequence.equals("seq".getBytes())){
+                        since = new String(sequence);
                     }
                 } catch (RocksDBException e) {
                     System.err.println(new Date() + " " + getName() + ": Received rocks db exception while looking up the value of the key " + new String(SEQ_NUM_KEY) + " locally");
@@ -73,8 +75,13 @@ public class ChangePollingThread extends Thread {
                 }
                 finalUrl = primaryReplicationUrl + "/changes?size=" + batchSize + "&since=" + since;
                 try {
-                    if (!shuttingDown) {
-                        replicate();
+                    // don't ask for the same sequence twice
+                    if(!sequence.equals(lastSequence)) {
+                        if (!shuttingDown) {
+                            replicate();
+                        }
+                    } else {
+                        System.out.println(new Date() + " " + getName() + ": Sequence " + sequence + " is the same as last request. Will not request again.");
                     }
                 } catch (IOException e) {
                     System.err.println(new Date() + " " + getName() + ": I/O exception processing " + finalUrl);
