@@ -75,13 +75,14 @@ public class ChangePollingThread extends Thread {
                 }
                 finalUrl = primaryReplicationUrl + "/changes?size=" + batchSize + "&since=" + since;
                 try {
-                    // don't ask for the same sequence twice
-                    if(!sequence.equals(lastSequence)) {
-                        if (!shuttingDown) {
+                    if (!shuttingDown) {
+                        // don't ask for the same sequence twice
+                        if (!sequence.equals(lastSequence)) {
                             replicate();
+                        } else {
+                            System.out.println(new Date() + " " + getName() + ": Sequence " + sequence
+                                    + " is the same as last request. Will not request again.");
                         }
-                    } else {
-                        System.out.println(new Date() + " " + getName() + ": Sequence " + sequence + " is the same as last request. Will not request again.");
                     }
                 } catch (IOException e) {
                     System.err.println(new Date() + " " + getName() + ": I/O exception processing " + finalUrl);
